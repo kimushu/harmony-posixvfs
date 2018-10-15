@@ -1,0 +1,35 @@
+config USE_3RDPARTY_UNIXFD
+    bool "Use UnixFD service?"
+    default n
+
+ifblock USE_3RDPARTY_UNIXFD
+    menu "UnixFD Configuration"
+        ---help---
+        <p><strong>UnixFD</strong></p>
+        <div>&nbsp;</div>
+        <p>Refer to https://github.com/kimushu/harmony-unixfd</p>
+        ---endhelp---
+
+        comment "UnixFD - version 0.1"
+
+        config UNIXFD_MAX_FDS
+            int "Max file descriptors"
+            default 8
+            range 3 64
+            ---help---
+            <div><strong>UnixFD - Max file descriptors</strong></div>
+            <div>&nbsp;</div>
+            <div>The maximum number of file descriptors.</div>
+            ---endhelp---
+
+    endmenu
+
+    template UNIXFD_CONFIG_H "$HARMONY_VERSION_PATH/third_party/harmony-unixfd/templates/unixfd_config.h.ftl" to "$PROJECT_HEADER_FILES/app/system_config/$CONFIGURATION/unixfd_config.h"
+
+    file UNIXFD_H "$HARMONY_VERSION_PATH/third_party/harmony-unixfd/src/unixfd.h" to "$PROJECT_HEADER_FILES/third_party/unixfd/unixfd.h"
+    file UNIXFD_CORE_C "$HARMONY_VERSION_PATH/third_party/harmony-unixfd/src/unixfd_core.c" to "$PROJECT_SOURCE_FILES/third_party/unixfd/unixfd_core.c"
+
+    compiler UNIXFD_COMPILER_INCLUDEPATH_1 includepath "$PROJECT_SOURCE_FILES/system_config/$CONFIGURATION"
+    compiler UNIXFD_COMPILER_INCLUDEPATH_2 includepath "$PROJECT_HEADER_FILES/third_party/unixfd"
+
+endif
