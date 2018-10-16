@@ -3,6 +3,7 @@
 
 #include <unistd.h>
 #include <sys/stat.h>
+#include "unixfd_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,26 +44,43 @@ unixfd_mountpoint_t;
 
 extern int unixfd_mount(unixfd_mountpoint_t *mp);
 extern int unixfd_umount(unixfd_mountpoint_t *mp);
+extern int unixfd_stdio_redirect(int old_fdnum, int new_fdnum);
 
-#define UNIXFD_MOUNTPOINT_FILE(_var, _path, _dev)   \
-    static unixfd_mountpoint_t _var = { \
+#if (UNIXFD_DEVICE_NULL)
+extern int unixfd_init_null(void);
+#endif
+#if (UNIXFD_DEVICE_ZERO)
+extern int unixfd_init_zero(void);
+#endif
+#if (UNIXFD_DEVICE_USB_CDC)
+extern int unixfd_init_usb_cdc(void);
+#endif
+
+#define UNIXFD_MOUNTPOINT_FILE(_name, _path, ...)   \
+    static const unixfd_device_t _name##_dev = { \
+        __VA_ARGS__ \
+    }; \
+    unixfd_mountpoint_t _name = { \
         .path = _path, \
-        .dev = _dev, \
+        .dev = &_name##_dev, \
         .flags = UNIXFD_MPFLAG_FILE, \
     }
 
-#define UNIXFD_MOUNTPOINT_DIR(_var, _path, _dev, _flags)  \
-    static unixfd_mountpoint_t _var = { \
+#define UNIXFD_MOUNTPOINT_DIR(_name, _path, _flags, ...)  \
+    static const unixfd_device_t _name##_dev = { \
+        __VA_ARGS__ \
+    }; \
+    unixfd_mountpoint_t _name = { \
         .path = _path, \
-        .dev = _dev, \
+        .dev = &_name##_dev, \
         .flags = _flags, \
     }
 
-#define UNIXFD_MOUNTPOINT_DIR_ABS(_var, _path, _dev) \
-    UNIXFD_MOUNTPOINT_DIR(_var, _path, _dev, 0)
+#define UNIXFD_MOUNTPOINT_DIR_ABS(_name, _path, ...) \
+    UNIXFD_MOUNTPOINT_DIR(_name, _path, 0, __VA_ARGS__)
 
-#define UNIXFD_MOUNTPOINT_DIR_REL(_var, _path, _dev) \
-    UNIXFD_MOUNTPOINT_DIR(_var, _path, _dev, UNIXFD_MPFLAG_REL_PATH)
+#define UNIXFD_MOUNTPOINT_DIR_REL(_name, _path, ...) \
+    UNIXFD_MOUNTPOINT_DIR(_name, _path, UNIXFD_MPFLAG_REL_PATH, __VA_ARGS__)
 
 #ifdef __cplusplus
 }   /* extern "C" */
