@@ -6,8 +6,8 @@
 <#if CONFIG_UNIXFD_DEVICE_ZERO == true>
     unixfd_init_zero();
 </#if>
-<#if CONFIG_UNIXFD_DEVICE_USB_CDC == true>
-    unixfd_init_usb_cdc();
+<#if CONFIG_UNIXFD_DEVICE_USBCDC == true>
+    unixfd_init_usbcdc();
 </#if>
 <#if CONFIG_UNIXFD_STDIN_SOURCE != "None (Free)">
     unixfd_stdio_redirect(open(UNIXFD_STDIN_DEVICE, O_RDONLY), STDIN_FILENO);

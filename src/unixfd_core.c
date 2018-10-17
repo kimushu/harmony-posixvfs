@@ -51,6 +51,7 @@ static int unixfd_open_device_fd(int fdnum, const unixfd_device_t *dev, const ch
     int result;
 
     fd->dev = dev;
+    fd->private = NULL;
     fd->flags = flags;
     result = fd->dev->open ? (*fd->dev->open)(fd, pathname, flags, mode) : 0;
     if (result < 0) {

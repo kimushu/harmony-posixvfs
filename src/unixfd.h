@@ -52,8 +52,9 @@ extern int unixfd_init_null(void);
 #if (UNIXFD_DEVICE_ZERO)
 extern int unixfd_init_zero(void);
 #endif
-#if (UNIXFD_DEVICE_USB_CDC)
-extern int unixfd_init_usb_cdc(void);
+#if (UNIXFD_DEVICE_USBCDC)
+extern int unixfd_init_usbcdc(void);
+extern void unixfd_task_usbcdc(void);
 #endif
 
 #define UNIXFD_MOUNTPOINT_FILE(_name, _path, ...)   \
