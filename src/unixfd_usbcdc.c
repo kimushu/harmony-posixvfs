@@ -136,6 +136,10 @@ static ssize_t usbcdc_read(unixfd_fd_t *fd, void *buf, size_t count)
     usbcdc_instance_t *instance = (usbcdc_instance_t *)fd->private;
     ssize_t result;
 
+    if ((((fd->flags & O_ACCMODE) + 1) & 1) == 0) {
+        return -EACCES;
+    }
+
     while (!instance->configured) {
         if (fd->flags & O_NONBLOCK) {
             return -EAGAIN;
@@ -205,6 +209,10 @@ static ssize_t usbcdc_write(unixfd_fd_t *fd, const void *buf, size_t count)
     USB_DEVICE_CDC_RESULT cdcResult;
     usbcdc_instance_t *instance = (usbcdc_instance_t *)fd->private;
     USB_DEVICE_CDC_TRANSFER_HANDLE transferHandle;
+
+    if ((((fd->flags & O_ACCMODE) + 1) & 2) == 0) {
+        return -EACCES;
+    }
 
     while (!instance->configured) {
         if (fd->flags & O_NONBLOCK) {
