@@ -17,7 +17,7 @@ ifblock USE_3RDPARTY_UNIXFD
         <p>Refer to https://github.com/kimushu/harmony-unixfd</p>
         ---endhelp---
 
-        comment "UnixFD - version 0.1"
+        comment "UnixFD - version 0.2"
 
         config UNIXFD_MAX_FDS
             int "Max file descriptors"

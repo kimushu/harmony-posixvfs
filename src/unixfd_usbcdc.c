@@ -209,6 +209,7 @@ static ssize_t usbcdc_write(unixfd_fd_t *fd, const void *buf, size_t count)
     USB_DEVICE_CDC_RESULT cdcResult;
     usbcdc_instance_t *instance = (usbcdc_instance_t *)fd->private;
     USB_DEVICE_CDC_TRANSFER_HANDLE transferHandle;
+    char alignedBuf[64] __attribute__(( aligned(4) ));
 
     if ((((fd->flags & O_ACCMODE) + 1) & 2) == 0) {
         return -EACCES;
@@ -227,6 +228,14 @@ static ssize_t usbcdc_write(unixfd_fd_t *fd, const void *buf, size_t count)
         }
     } else if (OSAL_MUTEX_Lock(&instance->write_lock, OSAL_WAIT_FOREVER) == OSAL_RESULT_FALSE) {
         return -EDEADLK;
+    }
+    
+    if (((uintptr_t)buf) & 3) {
+        if (count > sizeof(alignedBuf)) {
+            count = sizeof(alignedBuf);
+        }
+        memcpy(alignedBuf, buf, count);
+        buf = alignedBuf;
     }
 
     SYS_DEVCON_DataCacheClean((uintptr_t)buf, count);
