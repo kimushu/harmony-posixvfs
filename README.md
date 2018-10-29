@@ -1,2 +1,2 @@
-# harmony-unixfd
-Unix File Descriptor Library for Microchip Harmony
+# harmony-posixvfs
+POSIX interface VFS (Virtual File System) Library for Microchip Harmony

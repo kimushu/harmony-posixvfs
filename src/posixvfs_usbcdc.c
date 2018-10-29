@@ -1,8 +1,8 @@
-#include <unixfd.h>
+#include <posixvfs.h>
 #include <errno.h>
 #include <osal/osal.h>
 #include <termios.h>
-#include "unixfd_config.h"
+#include "posixvfs_config.h"
 #include "system_config.h"
 #include "system_definitions.h"
 #include "usb/usb_device_cdc.h"
@@ -39,7 +39,7 @@ typedef struct {
     OSAL_MUTEX_DECLARE(write_lock);
 } usbcdc_instance_t;
 
-static usbcdc_instance_t unixfd_usbcdc;
+static usbcdc_instance_t posixvfs_usbcdc;
 
 static USB_DEVICE_CDC_EVENT_RESPONSE usbcdc_cdc_event_handler(
     USB_DEVICE_CDC_INDEX index,
@@ -111,9 +111,9 @@ static void usbcdc_device_event_handler(USB_DEVICE_EVENT event, void *eventData,
         {
             USB_DEVICE_EVENT_DATA_CONFIGURED *pConfigured = (USB_DEVICE_EVENT_DATA_CONFIGURED *)eventData;
             if (pConfigured->configurationValue == 1) {
-                instance->cdcIndex = UNIXFD_USBCDC_DEVICE_CDC_INDEX;
+                instance->cdcIndex = POSIXVFS_USBCDC_DEVICE_CDC_INDEX;
                 USB_DEVICE_CDC_EventHandlerSet(
-                    UNIXFD_USBCDC_DEVICE_CDC_INDEX,
+                    POSIXVFS_USBCDC_DEVICE_CDC_INDEX,
                     (USB_DEVICE_CDC_EVENT_HANDLER)usbcdc_cdc_event_handler,
                     (uintptr_t)instance
                 );
@@ -125,13 +125,13 @@ static void usbcdc_device_event_handler(USB_DEVICE_EVENT event, void *eventData,
     }
 }
 
-static int usbcdc_open(unixfd_fd_t *fd, const char *pathname, int flags, mode_t mode)
+static int usbcdc_open(posixvfs_fd_t *fd, const char *pathname, int flags, mode_t mode)
 {
-    fd->private = &unixfd_usbcdc;
+    fd->private = &posixvfs_usbcdc;
     return 0;
 }
 
-static ssize_t usbcdc_read(unixfd_fd_t *fd, void *buf, size_t count)
+static ssize_t usbcdc_read(posixvfs_fd_t *fd, void *buf, size_t count)
 {
     usbcdc_instance_t *instance = (usbcdc_instance_t *)fd->private;
     ssize_t result;
@@ -204,7 +204,7 @@ aborted:
     return result;
 }
 
-static ssize_t usbcdc_write(unixfd_fd_t *fd, const void *buf, size_t count)
+static ssize_t usbcdc_write(posixvfs_fd_t *fd, const void *buf, size_t count)
 {
     USB_DEVICE_CDC_RESULT cdcResult;
     usbcdc_instance_t *instance = (usbcdc_instance_t *)fd->private;
@@ -252,7 +252,7 @@ static ssize_t usbcdc_write(unixfd_fd_t *fd, const void *buf, size_t count)
     return (cdcResult == USB_DEVICE_CDC_RESULT_OK) ? count : -EIO;
 }
 
-static int usbcdc_ioctl(unixfd_fd_t *fd, int request, char *argp)
+static int usbcdc_ioctl(posixvfs_fd_t *fd, int request, char *argp)
 {
     usbcdc_instance_t *instance = (usbcdc_instance_t *)fd->private;
 
@@ -265,18 +265,18 @@ static int usbcdc_ioctl(unixfd_fd_t *fd, int request, char *argp)
     return -EINVAL;
 }
 
-UNIXFD_MOUNTPOINT_FILE(mp_dev_usbcdc, "/dev/usb_cdc",
+POSIXVFS_MOUNTPOINT_FILE(mp_dev_usbcdc, "/dev/usb_cdc",
     .open = usbcdc_open,
     .read = usbcdc_read,
     .write = usbcdc_write,
     .ioctl = usbcdc_ioctl
 );
 
-static void unixfd_task_usbcdc_instance(usbcdc_instance_t *instance)
+static void posixvfs_task_usbcdc_instance(usbcdc_instance_t *instance)
 {
     switch (instance->state) {
     case USBCDC_STATE_INIT:
-        instance->deviceHandle = USB_DEVICE_Open(UNIXFD_USBCDC_DEVICE_INDEX, DRV_IO_INTENT_READWRITE);
+        instance->deviceHandle = USB_DEVICE_Open(POSIXVFS_USBCDC_DEVICE_INDEX, DRV_IO_INTENT_READWRITE);
         if (instance->deviceHandle == USB_DEVICE_HANDLE_INVALID) {
             break;
         }
@@ -299,12 +299,12 @@ static void unixfd_task_usbcdc_instance(usbcdc_instance_t *instance)
     }
 }
 
-void unixfd_task_usbcdc(void)
+void posixvfs_task_usbcdc(void)
 {
-    unixfd_task_usbcdc_instance(&unixfd_usbcdc);
+    posixvfs_task_usbcdc_instance(&posixvfs_usbcdc);
 }
 
-static void unixfd_init_usbcdc_instance(usbcdc_instance_t *instance)
+static void posixvfs_init_usbcdc_instance(usbcdc_instance_t *instance)
 {
     instance->state = USBCDC_STATE_INIT;
     instance->configured = 0;
@@ -315,7 +315,7 @@ static void unixfd_init_usbcdc_instance(usbcdc_instance_t *instance)
     instance->read_position = 0;
     instance->read_length = 0;
     instance->deviceHandle = USB_DEVICE_HANDLE_INVALID;
-    instance->lineCoding.dwDTERate = UNIXFD_USBCDC_BAUDRATE;
+    instance->lineCoding.dwDTERate = POSIXVFS_USBCDC_BAUDRATE;
     instance->lineCoding.bCharFormat = 0;
     instance->lineCoding.bParityType = 0;
     instance->lineCoding.bDataBits = 8;
@@ -326,8 +326,8 @@ static void unixfd_init_usbcdc_instance(usbcdc_instance_t *instance)
     OSAL_MUTEX_Create(&instance->write_lock);
 }
 
-int unixfd_init_usbcdc(void)
+int posixvfs_init_usbcdc(void)
 {
-    unixfd_init_usbcdc_instance(&unixfd_usbcdc);
-    return unixfd_mount(&mp_dev_usbcdc);
+    posixvfs_init_usbcdc_instance(&posixvfs_usbcdc);
+    return posixvfs_mount(&mp_dev_usbcdc);
 }

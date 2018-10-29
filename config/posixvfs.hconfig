@@ -1,0 +1,147 @@
+config USE_3RDPARTY_POSIXVFS
+    bool "Use PosixVFS service?"
+    default n
+
+enum POSIXVFS_STDIO_SOURCE
+    "None (Free)" || "Dummy (/dev/null)" || "USB-CDC"
+
+enum POSIXVFS_USBCDC_BAUDRATES
+    "9600" || "14400" || "19200" || "38400" || "57600" ||
+    "115200" || "230400" || "460800" || "921600"
+
+ifblock USE_3RDPARTY_POSIXVFS
+    menu "PosixVFS Configuration"
+        ---help---
+        <p><strong>PosixVFS</strong></p>
+        <div>&nbsp;</div>
+        <p>Refer to https://github.com/kimushu/harmony-posixvfs</p>
+        ---endhelp---
+
+        comment "PosixVFS - version 0.2"
+
+        config POSIXVFS_MAX_FDS
+            int "Max file descriptors"
+            default 8
+            range 3 64
+            ---help---
+            <div><strong>PosixVFS - Max file descriptors</strong></div>
+            <div>&nbsp;</div>
+            <div>The maximum number of file descriptors.</div>
+            ---endhelp---
+
+        menu "Functions"
+            config POSIXVFS_FUNCTION_OPEN
+                bool "open()"
+                default y
+                persistent
+
+            config POSIXVFS_FUNCTION_CLOSE
+                bool "close()"
+                default y
+                persistent
+
+            config POSIXVFS_FUNCTION_READ
+                bool "read()"
+                default y
+                persistent
+
+            config POSIXVFS_FUNCTION_WRITE
+                bool "write()"
+                default y
+                persistent
+
+            config POSIXVFS_FUNCTION_LSEEK
+                bool "lseek()"
+                default y
+
+            config POSIXVFS_FUNCTION_FSTAT
+                bool "fstat()"
+                default y
+
+            config POSIXVFS_FUNCTION_IOCTL
+                bool "ioctl()"
+                default y
+        endmenu
+
+        menu "Devices & Special Files"
+            config POSIXVFS_DEVICE_NULL
+                bool "null special file (/dev/null)"
+                default y if POSIXVFS_STDIN_SOURCE = "Dummy (/dev/null)" || POSIXVFS_STDOUT_SOURCE = "Dummy (/dev/null)" || POSIXVFS_STDERR_SOURCE = "Dummy (/dev/null)"
+                persistent if POSIXVFS_STDIN_SOURCE = "Dummy (/dev/null)" || POSIXVFS_STDOUT_SOURCE = "Dummy (/dev/null)" || POSIXVFS_STDERR_SOURCE = "Dummy (/dev/null)"
+                default n
+
+            config POSIXVFS_DEVICE_ZERO
+                bool "zero special file (/dev/zero)"
+                default n
+
+            config POSIXVFS_DEVICE_USBCDC
+                bool "USB-CDC device (/dev/usb_cdc)"
+                default y if POSIXVFS_STDIN_SOURCE = "USB-CDC" || POSIXVFS_STDOUT_SOURCE = "USB-CDC" || POSIXVFS_STDERR_SOURCE = "USB-CDC"
+                persistent if POSIXVFS_STDIN_SOURCE = "USB-CDC" || POSIXVFS_STDOUT_SOURCE = "USB-CDC" || POSIXVFS_STDERR_SOURCE = "USB-CDC"
+                default n
+        endmenu
+
+        menu "Standard IO"
+            config POSIXVFS_STDIN_SOURCE
+                string "stdin (fd=0)"
+                range POSIXVFS_STDIO_SOURCE
+                default "Dummy (/dev/null)"
+
+            config POSIXVFS_STDOUT_SOURCE
+                string "stdout (fd=1)"
+                range POSIXVFS_STDIO_SOURCE
+                default "Dummy (/dev/null)"
+
+            config POSIXVFS_STDERR_SOURCE
+                string "stderr (fd=2)"
+                range POSIXVFS_STDIO_SOURCE
+                default "Dummy (/dev/null)"
+        endmenu
+
+        menu "USB-CDC"
+            visible if POSIXVFS_DEVICE_USBCDC
+
+            config POSIXVFS_USBCDC_BAUDRATE
+                string "Baud rate"
+                range POSIXVFS_USBCDC_BAUDRATES
+                default "921600"
+        endmenu
+    endmenu
+
+    template POSIXVFS_CONFIG_H "$HARMONY_VERSION_PATH/third_party/harmony-posixvfs/templates/posixvfs_config.h.ftl" to "$PROJECT_HEADER_FILES/app/system_config/$CONFIGURATION/posixvfs_config.h"
+
+    file POSIXVFS_H "$HARMONY_VERSION_PATH/third_party/harmony-posixvfs/src/posixvfs.h" to "$PROJECT_HEADER_FILES/third_party/posixvfs/posixvfs.h"
+    file POSIXVFS_SYS_IOCTL_H "$HARMONY_VERSION_PATH/third_party/harmony-posixvfs/src/sys/ioctl.h" to "$PROJECT_HEADER_FILES/third_party/posixvfs/sys/ioctl.h"
+    ifblock POSIXVFS_DEVICE_USBCDC
+        file POSIXVFS_SYS_TERMIOS_H "$HARMONY_VERSION_PATH/third_party/harmony-posixvfs/src/sys/termios.h" to "$PROJECT_HEADER_FILES/third_party/posixvfs/sys/termios.h"
+    endif
+
+    file POSIXVFS_CORE_C "$HARMONY_VERSION_PATH/third_party/harmony-posixvfs/src/posixvfs_core.c" to "$PROJECT_SOURCE_FILES/third_party/posixvfs/posixvfs_core.c"
+
+    add "<#include \"/third_party/harmony-posixvfs/templates/system_definitions.h.include.ftl\">" to list SYSTEM_DEFINITIONS_H_INCLUDES
+    ifblock POSIXVFS_DEVICE_NULL || POSIXVFS_DEVICE_ZERO || POSIXVFS_DEVICE_USBCDC
+        add "<#include \"/third_party/harmony-posixvfs/templates/system_init.c.call.ftl\">" to list SYSTEM_INIT_C_INITIALIZE_SYSTEM_SERVICES
+        add "<#include \"/third_party/harmony-posixvfs/templates/system_tasks.c.ftl\">" to list SYSTEM_TASKS_C_CALL_SYSTEM_TASKS
+    endif
+
+    ifblock POSIXVFS_DEVICE_NULL
+        file POSIXVFS_NULL_C "$HARMONY_VERSION_PATH/third_party/harmony-posixvfs/src/posixvfs_null.c" to "$PROJECT_SOURCE_FILES/third_party/posixvfs/posixvfs_null.c"
+    endif
+    ifblock POSIXVFS_DEVICE_ZERO
+        file POSIXVFS_ZERO_C "$HARMONY_VERSION_PATH/third_party/harmony-posixvfs/src/posixvfs_zero.c" to "$PROJECT_SOURCE_FILES/third_party/posixvfs/posixvfs_zero.c"
+    endif
+    ifblock POSIXVFS_DEVICE_USBCDC
+        file POSIXVFS_USBCDC_C "$HARMONY_VERSION_PATH/third_party/harmony-posixvfs/src/posixvfs_usbcdc.c" to "$PROJECT_SOURCE_FILES/third_party/posixvfs/posixvfs_usbcdc.c"
+    endif
+
+    compiler POSIXVFS_COMPILER_INCLUDEPATH_1 includepath "$PROJECT_SOURCE_FILES/system_config/$CONFIGURATION"
+
+    ifblock PROJECT_STANDALONE = n
+        compiler POSIXVFS_COMPILER_INCLUDEPATH_2 includepath "$HARMONY_VERSION_PATH/third_party/harmony-posixvfs/src"
+    endif
+
+    ifblock PROJECT_STANDALONE = y
+        compiler POSIXVFS_COMPILER_INCLUDEPATH_2_SA includepath "$PROJECT_HEADER_FILES/third_party/posixvfs"
+    endif
+
+endif
